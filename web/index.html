@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en" data-build="{{build}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{{title}} {{subtitle}}</title>
+  <meta name="description" content="{{description}}">
+  <meta name="theme-color" content="#242629">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23242629'/%3E%3Ccircle cx='16' cy='16' r='8' fill='none' stroke='%23fff' stroke-width='2.5'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="bar">
+    <a class="brand" href="#/"><strong>{{title}}</strong> <span>{{subtitle}}</span></a>
+    <nav aria-label="Main">
+      <a href="#/" data-tab="photos">Photos</a>
+      <a href="#/albums" data-tab="albums">Albums</a>
+      <button type="button" id="about-open" hidden>About</button>
+    </nav>
+  </header>
+
+  <main id="view"></main>
+  <noscript><p class="notice">This site needs JavaScript to show the photos.</p></noscript>
+
+  <footer id="foot"></footer>
+
+  <!-- Photo viewer -->
+  <dialog id="lightbox" aria-label="Photo viewer">
+    <div class="lb-top">
+      <span id="lb-count" aria-live="polite"></span>
+      <button type="button" class="icon" id="lb-close" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="lb-stage" id="lb-stage" tabindex="-1" autofocus>
+      <img id="lb-img" alt="">
+      <button type="button" class="icon nav prev" id="lb-prev" aria-label="Previous photo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <button type="button" class="icon nav next" id="lb-next" aria-label="Next photo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+    <div class="lb-info">
+      <p class="where" id="lb-where"></p>
+      <p class="exif" id="lb-exif"></p>
+    </div>
+  </dialog>
+
+  <!-- About drawer -->
+  <dialog id="about" aria-label="About">
+    <div class="drawer">
+      <button type="button" class="icon" id="about-close" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <div id="about-body"></div>
+    </div>
+  </dialog>
+</body>
+</html>

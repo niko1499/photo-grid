@@ -1,0 +1,169 @@
+/* Theme: dark charcoal, edge-to-edge square mosaic, spaced uppercase header.
+   Everything you might want to tweak lives in :root. */
+:root {
+  color-scheme: dark;
+  --bg: #242629;
+  --surface: #2e3136;
+  --raised: #1d1f21;
+  --line: rgba(255, 255, 255, 0.1);
+  --text: #f4f4f5;
+  --muted: rgba(244, 244, 245, 0.6);
+  --gap: 2px;
+  --bar: 3.25rem;
+  --tile: clamp(9rem, 16vw, 15rem);    /* minimum photo tile width: 2 columns on phones, ~6 on laptops */
+  --album: clamp(11rem, 26vw, 22rem);  /* minimum album tile width */
+  --font: "Source Sans 3", "Source Sans Pro", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { background: var(--bg); color: var(--text); font-family: var(--font); -webkit-text-size-adjust: 100%; }
+html:has(dialog[open]) { overflow: hidden; }
+body { margin: 0; min-height: 100dvh; display: flex; flex-direction: column; line-height: 1.5; }
+main { flex: 1; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+/* ---- Header ---------------------------------------------------------------- */
+.bar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  height: var(--bar);
+  padding: 0 max(1rem, env(safe-area-inset-right)) 0 max(1rem, env(safe-area-inset-left));
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.brand {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 0.8rem; font-weight: 300; letter-spacing: 0.22em; text-transform: uppercase;
+}
+.brand strong { font-weight: 600; }
+nav { display: flex; gap: 1.5rem; }
+nav a, nav button {
+  padding: 0.5rem 0; border: 0; border-bottom: 2px solid transparent; background: none; cursor: pointer;
+  font-size: 0.75rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+  transition: color 0.15s;
+}
+nav a:hover, nav button:hover, nav a[aria-current] { color: var(--text); }
+nav a[aria-current] { border-bottom-color: currentColor; }
+@media (max-width: 34rem) {
+  .brand { font-size: 0.75rem; letter-spacing: 0.12em; }
+  .brand span { display: none; }
+  nav { gap: 1rem; }
+  nav a, nav button { font-size: 0.7rem; letter-spacing: 0.1em; }
+}
+@media (max-width: 22rem) {
+  .brand { letter-spacing: 0.05em; }
+  nav { gap: 0.8rem; }
+  nav a, nav button { letter-spacing: 0.05em; }
+}
+
+/* ---- Mosaic ---------------------------------------------------------------- */
+.grid {
+  display: grid; gap: var(--gap); padding: var(--gap);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--tile)), 1fr));
+}
+.grid.albums { grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--album)), 1fr)); }
+
+.tile { position: relative; display: block; aspect-ratio: 1; overflow: hidden; background: var(--surface); }
+.tile:focus-visible { outline-offset: -3px; }
+.tile img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  opacity: 0; transition: opacity 0.4s, transform 0.5s, filter 0.3s;
+}
+.tile img.in { opacity: 1; }
+.tile:hover img, .tile:focus-visible img { filter: brightness(0.82); transform: scale(1.03); }
+
+/* Label that fades in over a photo tile on hover (album name) */
+.tile .tag {
+  position: absolute; inset: auto 0 0 0; padding: 2.5rem 0.8rem 0.65rem;
+  font-size: 0.85rem; background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  opacity: 0; transition: opacity 0.2s;
+}
+.tile:hover .tag, .tile:focus-visible .tag { opacity: 1; }
+@media (hover: none) { .tile .tag { display: none; } }
+
+/* Album tiles keep their caption visible */
+.tile .cap {
+  position: absolute; inset: auto 0 0 0; padding: 3rem clamp(0.6rem, 2vw, 1rem) 0.8rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+}
+.tile .cap b { display: block; font-size: clamp(1rem, 1.2vw + 0.6rem, 1.2rem); font-weight: 600; line-height: 1.25; }
+.tile .cap span { display: inline-block; margin-right: 0.9rem; font-size: 0.8rem; color: rgba(255, 255, 255, 0.75); }
+
+/* ---- Album page header, empty and error states ----------------------------- */
+.head { display: grid; gap: 0.15rem; padding: 1.25rem 1rem 0.9rem; }
+.head .back { display: inline-flex; align-items: center; justify-self: start; gap: 0.15rem; margin-left: -0.3rem; font-size: 0.85rem; color: var(--muted); }
+.head .back:hover { color: var(--text); }
+.head .back svg { width: 1.1rem; height: 1.1rem; }
+.head h1 { margin: 0; font-size: 1.6rem; font-weight: 600; line-height: 1.2; }
+.head .meta { display: flex; flex-wrap: wrap; gap: 0 1.1rem; font-size: 0.875rem; color: var(--muted); }
+
+.notice { max-width: 34rem; margin: 18vh auto 0; padding: 0 1.25rem; }
+.notice h1 { margin: 0 0 0.5rem; font-size: 1.25rem; font-weight: 600; }
+.notice p { margin: 0 0 0.75rem; color: var(--muted); }
+.notice code { padding: 0.1em 0.4em; border-radius: 3px; background: var(--surface); color: var(--text); font-size: 0.9em; }
+
+footer { padding: 1.5rem 1rem calc(1.5rem + env(safe-area-inset-bottom)); font-size: 0.8rem; color: var(--muted); }
+
+/* ---- Icon buttons ---------------------------------------------------------- */
+.icon { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
+.icon svg { width: 1.6rem; height: 1.6rem; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.icon:hover { background: rgba(255, 255, 255, 0.1); }
+.head .back svg { fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---- Photo viewer ---------------------------------------------------------- */
+dialog { padding: 0; border: 0; color: var(--text); }
+dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+
+#lightbox {
+  width: 100%; height: 100dvh; max-width: none; max-height: none; margin: 0; inset: 0;
+  background: #0e0f10;
+}
+#lightbox[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; animation: fade 0.2s ease-out; }
+@keyframes fade { from { opacity: 0; } }
+
+.lb-top {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.25rem 0.5rem 0 1rem; font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.lb-stage { position: relative; display: flex; align-items: center; justify-content: center; min-height: 0; min-width: 0; padding: 0 0.5rem; outline: none; touch-action: pan-y pinch-zoom; }
+.lb-stage > img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; }
+.icon.nav { position: absolute; top: 50%; translate: 0 -50%; width: 3rem; height: 4.5rem; border-radius: 4px; background: rgba(0, 0, 0, 0.3); color: rgba(255, 255, 255, 0.85); }
+.icon.nav:hover { background: rgba(0, 0, 0, 0.6); }
+.icon.prev { left: 0.75rem; }
+.icon.next { right: 0.75rem; }
+#lightbox.single .nav { display: none; }
+@media (max-width: 34rem) { .icon.nav { width: 2.25rem; height: 3.5rem; } .icon.prev { left: 0.25rem; } .icon.next { right: 0.25rem; } }
+
+.lb-info {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.15rem 2rem;
+  min-height: 3.25rem; padding: 0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom)); font-size: 0.9rem;
+}
+.lb-info p { margin: 0; }
+.where b { font-weight: 600; }
+.where span { margin-left: 0.8rem; color: var(--muted); }
+.exif { display: flex; flex-wrap: wrap; gap: 0 1.25rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* ---- About drawer ---------------------------------------------------------- */
+#about {
+  width: min(26rem, 100%); height: 100dvh; max-width: none; max-height: none; margin: 0 0 0 auto;
+  border-left: 1px solid var(--line); background: var(--raised);
+  transform: translateX(100%);
+  transition: transform 0.3s ease, display 0.3s allow-discrete, overlay 0.3s allow-discrete;
+}
+#about[open] { transform: none; }
+@starting-style { #about[open] { transform: translateX(100%); } }
+.drawer { display: grid; align-content: start; gap: 0.5rem; min-height: 100%; padding: 0.75rem 1.5rem 2rem; }
+.drawer > .icon { justify-self: end; margin-right: -0.75rem; }
+#about-body h2 { margin: 0 0 0.75rem; font-size: 1.25rem; font-weight: 600; }
+#about-body p { margin: 0 0 1rem; color: rgba(244, 244, 245, 0.85); max-width: 60ch; }
+#about-body ul { display: grid; gap: 0.35rem; margin: 1.5rem 0 0; padding: 0; list-style: none; }
+#about-body li a { border-bottom: 1px solid var(--line); }
+#about-body li a:hover { border-color: var(--text); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
