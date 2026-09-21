@@ -51,7 +51,12 @@ nav > a:hover, nav > button:hover, nav > a[aria-current] { color: var(--text); }
 nav > a[aria-current] { border-bottom-color: currentColor; }
 /* View toggle: square grid  /  original proportions */
 .modes { display: flex; align-items: center; gap: 0.15rem; }
-.modes::after { content: ""; width: 1px; height: 1.1rem; margin-left: 0.9rem; background: var(--line); }
+nav > a, nav > button { position: relative; }
+nav .modes + a::before,
+nav .modes + button::before {
+  content: ""; position: absolute; left: -0.8rem; top: 50%; transform: translateY(-50%);
+  width: 1px; height: 1.1rem; background: var(--line);
+}
 .modes button {
   display: grid; place-items: center; width: 2.25rem; height: 2.25rem; padding: 0;
   border: 0; border-radius: 4px; background: none; color: var(--muted); cursor: pointer;
@@ -70,7 +75,8 @@ nav > a[aria-current] { border-bottom-color: currentColor; }
   nav { flex: 1 0 100%; gap: 1.1rem; }
   nav > a, nav > button { font-size: 0.7rem; letter-spacing: 0.1em; }
   .modes { margin-left: auto; }
-  .modes::after { display: none; }
+  nav .modes + a::before,
+  nav .modes + button::before { display: none; }
 }
 @media (max-width: 22rem) {
   nav { gap: 0.8rem; }
