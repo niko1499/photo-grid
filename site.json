@@ -16,5 +16,6 @@
 
   "thumb_size": 480,
   "large_size": 2200,
-  "quality": 80
+  "quality": 80,
+  "wide_ratio": 1.15
 }

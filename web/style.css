@@ -18,19 +18,20 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html { background: var(--bg); color: var(--text); font-family: var(--font); -webkit-text-size-adjust: 100%; }
+html { scrollbar-gutter: stable; background: var(--bg); color: var(--text); font-family: var(--font); -webkit-text-size-adjust: 100%; }
 html:has(dialog[open]) { overflow: hidden; }
 body { margin: 0; min-height: 100dvh; display: flex; flex-direction: column; line-height: 1.5; }
 main { flex: 1; }
 a { color: inherit; text-decoration: none; }
 button { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
 :focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 
 /* ---- Header ---------------------------------------------------------------- */
 .bar {
   position: sticky; top: 0; z-index: 10;
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-  height: var(--bar);
+  min-height: var(--bar);
   padding: 0 max(1rem, env(safe-area-inset-right)) 0 max(1rem, env(safe-area-inset-left));
   background: var(--bg);
   border-bottom: 1px solid var(--line);
@@ -40,41 +41,64 @@ button { font: inherit; color: inherit; }
   font-size: 0.8rem; font-weight: 300; letter-spacing: 0.22em; text-transform: uppercase;
 }
 .brand strong { font-weight: 600; }
-nav { display: flex; gap: 1.5rem; }
-nav a, nav button {
+nav { display: flex; align-items: center; gap: 1.5rem; }
+nav > a, nav > button {
   padding: 0.5rem 0; border: 0; border-bottom: 2px solid transparent; background: none; cursor: pointer;
   font-size: 0.75rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
   transition: color 0.15s;
 }
-nav a:hover, nav button:hover, nav a[aria-current] { color: var(--text); }
-nav a[aria-current] { border-bottom-color: currentColor; }
+nav > a:hover, nav > button:hover, nav > a[aria-current] { color: var(--text); }
+nav > a[aria-current] { border-bottom-color: currentColor; }
+/* View toggle: square grid  /  original proportions */
+.modes { display: flex; align-items: center; gap: 0.15rem; }
+.modes::after { content: ""; width: 1px; height: 1.1rem; margin-left: 0.9rem; background: var(--line); }
+.modes button {
+  display: grid; place-items: center; width: 2.25rem; height: 2.25rem; padding: 0;
+  border: 0; border-radius: 4px; background: none; color: var(--muted); cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+.modes button:hover { color: var(--text); }
+.modes button[aria-pressed="true"] { color: var(--text); background: rgba(255, 255, 255, 0.11); }
+.modes svg { width: 1.2rem; height: 1.2rem; }
+.modes path { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+.modes rect { fill: currentColor; }
+
 @media (max-width: 34rem) {
-  .brand { font-size: 0.75rem; letter-spacing: 0.12em; }
-  .brand span { display: none; }
-  nav { gap: 1rem; }
-  nav a, nav button { font-size: 0.7rem; letter-spacing: 0.1em; }
+  /* Phones: site name on its own line, tabs and view toggle underneath */
+  .bar { flex-wrap: wrap; align-content: center; gap: 0; padding-top: 0.55rem; padding-bottom: 0.1rem; }
+  .brand { flex: 1 0 100%; font-size: 0.75rem; letter-spacing: 0.12em; }
+  nav { flex: 1 0 100%; gap: 1.1rem; }
+  nav > a, nav > button { font-size: 0.7rem; letter-spacing: 0.1em; }
+  .modes { margin-left: auto; }
+  .modes::after { display: none; }
 }
 @media (max-width: 22rem) {
-  .brand { letter-spacing: 0.05em; }
   nav { gap: 0.8rem; }
-  nav a, nav button { letter-spacing: 0.05em; }
+  .modes button { width: 2rem; }
 }
 
 /* ---- Mosaic ---------------------------------------------------------------- */
 .grid {
   display: grid; gap: var(--gap); padding: var(--gap);
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--tile)), 1fr));
+  --min: var(--tile);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--min)), 1fr));
 }
-.grid.albums { grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--album)), 1fr)); }
+.grid.albums { --min: var(--album); }
+.grid.albums.packed { --min: var(--tile); } /* Original view: covers use the same column size as photos */
 
 .tile { position: relative; display: block; aspect-ratio: 1; overflow: hidden; background: var(--surface); }
 .tile:focus-visible { outline-offset: -3px; }
 .tile img {
-  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 40%;
   opacity: 0; transition: opacity 0.4s, transform 0.5s, filter 0.3s;
 }
 .tile img.in { opacity: 1; }
-.tile:hover img, .tile:focus-visible img { filter: brightness(0.82); transform: scale(1.03); }
+
+/* Original-proportions view: app.js positions every tile (see packLanes). Each keeps its photo's exact shape;
+   the .probe element only lets the script read the minimum column width from CSS. */
+.grid.packed { display: block; position: relative; padding: 0; }
+.grid.packed .tile { position: absolute; aspect-ratio: auto; }
+.grid.packed .probe { position: absolute; visibility: hidden; height: 0; width: min(100%, var(--min)); }
 
 /* Label that fades in over a photo tile on hover (album name) */
 .tile .tag {

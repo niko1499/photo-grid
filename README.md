@@ -116,7 +116,6 @@ web/app.js               tabs, mosaic, albums, viewer, About panel
 - **Allow linking to externally served photos such as Immich or Google Photos to get around git around repo size limits**
 - **Link straight to a photo:** the viewer already knows which photo is open; add it to the URL hash in `openViewer()`.
 - **Search or tags:** filter `data.photos` in `photosView()`.
-- **Alternate layouts besides square grid**
 - **Sort by date assending/decending**
 
 ## Tips

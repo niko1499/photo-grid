@@ -6,7 +6,8 @@
 
 What it does
   1. Finds every image under photos/. The folder a photo sits in is its album.
-  2. Writes a square thumbnail and a web-sized copy of each photo (WebP), with
+  2. Writes a thumbnail (keeps the photo's shape) and a web-sized copy of each photo (WebP), plus a
+     mid-size copy for landscape photos (they are shown two columns wide in Original view), with
      colours converted to sRGB and all metadata (including GPS) stripped.
   3. Reads camera settings (EXIF) and writes everything to _site/data.json.
   4. Copies web/ (index.html, style.css, app.js) into _site/.
@@ -57,6 +58,7 @@ DEFAULTS = {
     "thumb_size": 480,
     "large_size": 2200,
     "quality": 80,
+    "wide_ratio": 1.15,
 }
 # Settings the browser gets to see (the rest only affect the build).
 PUBLIC_KEYS = ["title", "subtitle", "description", "author", "bio", "email", "links"]
@@ -213,7 +215,20 @@ def fit_long_edge(w: int, h: int, long_edge: int) -> tuple[int, int]:
     return max(1, round(w * scale)), max(1, round(h * scale))
 
 
-def render(src: Path, thumb: Path, large: Path, size: tuple[int, int], cfg: dict) -> None:
+def thumb_dims(w: int, h: int, short_edge: int) -> tuple[int, int]:
+    """Thumbnail size: the short side is `short_edge` (never upscaled). The long side is capped
+    at twice that so panoramas stay light. The photo's shape is kept, so the page can show the
+    thumbnail cropped to a square (Grid view) or as-is (Original view)."""
+    s = min(1.0, short_edge / min(w, h))
+    tw, th = w * s, h * s
+    cap = 2 * short_edge
+    if max(tw, th) > cap:
+        s2 = cap / max(tw, th)
+        tw, th = tw * s2, th * s2
+    return max(1, round(tw)), max(1, round(th))
+
+
+def render(src: Path, thumb: Path, large: Path, mid: Path | None, size: tuple[int, int], cfg: dict) -> None:
     lw, lh = size
     q = cfg["quality"]
     with Image.open(src) as im:
@@ -229,10 +244,15 @@ def render(src: Path, thumb: Path, large: Path, size: tuple[int, int], cfg: dict
         if im.size != (lw, lh):
             im = im.resize((lw, lh), Image.Resampling.LANCZOS, reducing_gap=2.0)
 
-        side = min(cfg["thumb_size"], lw, lh)
-        square = ImageOps.fit(im, (side, side), Image.Resampling.LANCZOS, centering=(0.5, 0.4))
+        tw, th = thumb_dims(lw, lh, cfg["thumb_size"])
+        small = im if (tw, th) == im.size else im.resize((tw, th), Image.Resampling.LANCZOS, reducing_gap=2.0)
 
-        for target, pic in ((large, im), (thumb, square)):
+        outputs = [(large, im), (thumb, small)]
+        if mid is not None:  # landscape photos are shown two columns wide in Original view, so they get a bigger copy
+            mw, mh = fit_long_edge(lw, lh, 2 * cfg["thumb_size"])
+            outputs.append((mid, im if (mw, mh) == im.size else im.resize((mw, mh), Image.Resampling.LANCZOS, reducing_gap=2.0)))
+
+        for target, pic in outputs:
             target.parent.mkdir(parents=True, exist_ok=True)
             _to_srgb(pic, icc).save(target, "WEBP", quality=q, method=4)
 
@@ -292,7 +312,7 @@ def main() -> int:
 
     # Regenerate images if size/quality settings changed since last build.
     img_dir = OUT_DIR / "img"
-    stamp = json.dumps({k: cfg[k] for k in ("thumb_size", "large_size", "quality")}, sort_keys=True)
+    stamp = json.dumps({"layout": 3, **{k: cfg[k] for k in ("thumb_size", "large_size", "quality", "wide_ratio")}}, sort_keys=True)
     stamp_file = img_dir / ".stamp"
     if stamp_file.exists() and stamp_file.read_text() != stamp:
         shutil.rmtree(img_dir)
@@ -327,11 +347,13 @@ def main() -> int:
             rel = f"{folder}/{name}.webp"
 
             lw, lh = fit_long_edge(w, h, cfg["large_size"])
+            wide = lw / lh >= cfg["wide_ratio"]
             thumb, large = img_dir / "thumb" / rel, img_dir / "large" / rel
-            if is_fresh(src, thumb, large):
+            mid = img_dir / "mid" / rel if wide else None
+            if is_fresh(src, *[p for p in (thumb, large, mid) if p]):
                 cached += 1
             else:
-                render(src, thumb, large, (lw, lh), cfg)
+                render(src, thumb, large, mid, (lw, lh), cfg)
                 made += 1
                 print(f"  + {src.relative_to(PHOTOS_DIR).as_posix()}")
         except Exception as e:  # one bad file should not sink the whole build
@@ -351,6 +373,8 @@ def main() -> int:
                 "exif": {f: exif[f] for f in cfg["exif_fields"] if f in exif},
             },
         }
+        if wide:
+            entry["rec"]["mid"] = f"img/mid/{rel}"
         entries.append(entry)
         if album:
             album["entries"].append(entry)
@@ -375,7 +399,7 @@ def main() -> int:
             "slug": a["slug"],
             "title": a["title"],
             "date": date,
-            "cover": cover["rec"]["thumb"],
+            "cover": position[id(cover)],
             "photos": [position[id(e)] for e in a["entries"]],
         })
     dated_albums = sorted((a for a in out_albums if a["date"]), key=lambda a: date_key(a["date"]), reverse=True)
@@ -406,7 +430,7 @@ def main() -> int:
         json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
     # ---- remove generated images whose source photo is gone -------------------
-    keep = {p for e in entries for p in (e["rec"]["src"], e["rec"]["thumb"])}
+    keep = {p for e in entries for p in (e["rec"]["src"], e["rec"]["thumb"], e["rec"].get("mid")) if p}
     for f in img_dir.rglob("*"):
         if f.is_file() and f.name != ".stamp" and f.relative_to(OUT_DIR).as_posix() not in keep:
             f.unlink()

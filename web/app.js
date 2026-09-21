@@ -16,6 +16,10 @@ const BASE_TITLE = document.title;
 let data = { site: {}, photos: [], albums: [] };
 let albums = new Map();
 
+// View mode: 'grid' = square tiles, 'fit' = every photo in its original proportions.
+let mode = 'grid';
+try { if (localStorage.getItem('view') === 'fit') mode = 'fit'; } catch { /* storage blocked: fine */ }
+
 // ---- tiny helpers -----------------------------------------------------------
 /** h('a', {href: '#'}, 'text', child) -> element. Builds DOM safely (no innerHTML). */
 function h(tag, props = {}, ...kids) {
@@ -44,6 +48,7 @@ function loadedImg(src, alt = '') {
   const img = h('img', { alt, loading: 'lazy', decoding: 'async' });
   img.addEventListener('load', () => img.classList.add('in'), { once: true });
   img.src = src;
+  if (img.complete) img.classList.add('in'); // already cached (e.g. after switching view)
   return img;
 }
 
@@ -60,19 +65,111 @@ function emptyState() {
   );
 }
 
+// Landscape photos are two columns wide in Original view, so they use their bigger copy there.
+const tileSrc = (p) => (mode === 'fit' && p.mid) || p.thumb;
+const shape = (p) => ({ ratio: p.w / p.h, wide: Boolean(p.mid) });
+
 function photoTile(p, i, showAlbum) {
   const album = showAlbum && p.album ? albums.get(p.album) : null;
   return h('a', { class: 'tile', href: p.src, 'data-i': i },
-    loadedImg(p.thumb, p.title || `Photo ${i + 1}`),
+    loadedImg(tileSrc(p), p.title || `Photo ${i + 1}`),
     album && h('span', { class: 'tag' }, album.title));
 }
 
-/** A square mosaic. Clicking a tile opens the viewer on that list of photos. */
+// Original-proportions layout ("fit" mode).
+//
+// The columns are grouped into lanes two columns wide. A lane is filled one row at a time:
+//   - a landscape photo takes a whole row, so it is as wide as two portraits side by side;
+//   - two portraits share a row and are sized to one common height so the row is exactly lane-wide.
+// Every row therefore fills its lane exactly: nothing overlaps, nothing is cropped or stretched and there
+// are no gaps between pictures. Each new row goes into the shortest lane, so the only unevenness is
+// along the bottom edge of the page.
+//
+// items: [{ratio, wide}]   width: usable width (px)   gap: px between tiles   minCol: smallest column (px)
+// returns {rects: [{x, y, w, h}] in item order, height, lanes}
+// <pack>
+function packLanes(items, width, gap, minCol) {
+  const cols = Math.max(1, Math.floor((width + gap) / (minCol + gap))); // what the square grid would use
+  const per = cols >= 2 ? 2 : 1;                                        // columns per lane
+  const lanes = Math.max(1, Math.floor(cols / per));
+  const colW = (width - (lanes * per - 1) * gap) / (lanes * per);
+  const laneW = per * colW + (per - 1) * gap;
+
+  // Portraits pair up in order: 1st with 2nd, 3rd with 4th, ... A leftover one goes last, at the bottom edge.
+  const pairable = [];
+  items.forEach((it, i) => { if (per === 2 && !it.wide) pairable.push(i); });
+  const slot = new Map(pairable.map((i, k) => [i, k]));
+  const rows = [];
+  const tail = [];
+  items.forEach((it, i) => {
+    if (!slot.has(i)) { rows.push([i]); return; } // landscape, or a lane only one column wide
+    const k = slot.get(i);
+    if (k % 2) return;                             // already placed with the previous portrait
+    if (pairable[k + 1] !== undefined) rows.push([i, pairable[k + 1]]);
+    else tail.push([i]);
+  });
+  rows.push(...tail);
+
+  const bottoms = new Array(lanes).fill(0);
+  const rects = new Array(items.length);
+  for (const row of rows) {
+    let lane = 0; // shortest lane, leftmost on ties
+    for (let l = 1; l < lanes; l++) if (bottoms[l] < bottoms[lane] - 1e-6) lane = l;
+    const x = lane * (laneW + gap);
+    const y = bottoms[lane];
+    let h;
+    if (row.length === 2) {
+      const [a, b] = row;
+      h = (laneW - gap) / (items[a].ratio + items[b].ratio);
+      const wa = h * items[a].ratio;
+      rects[a] = { x, y, w: wa, h };
+      rects[b] = { x: x + wa + gap, y, w: laneW - gap - wa, h };
+    } else {
+      const i = row[0];
+      const w = per === 1 || items[i].wide ? laneW : colW;
+      h = w / items[i].ratio;
+      rects[i] = { x, y, w, h };
+    }
+    bottoms[lane] += h + gap;
+  }
+  return { rects, height: Math.max(0, Math.max(...bottoms) - gap), lanes };
+}
+// </pack>
+
+let relayout = null;
+const watcher = new ResizeObserver(() => relayout && relayout());
+
+/** Lay tiles out as a square grid (CSS does the work) or, in 'fit' mode, with packLanes(). */
+function mosaic(nodes, items, extraClass = '') {
+  const el = h('div', { class: ['grid', extraClass, mode === 'fit' ? 'packed' : ''].filter(Boolean).join(' ') });
+  if (mode !== 'fit') {
+    const frag = document.createDocumentFragment();
+    nodes.forEach((n) => frag.append(n));
+    el.append(frag);
+    return el;
+  }
+  const probe = h('div', { class: 'probe' }); // its width is the CSS minimum column width
+  el.append(probe, ...nodes);
+  let lastWidth = 0;
+  relayout = () => {
+    const width = el.clientWidth;
+    if (!width || Math.abs(width - lastWidth) < 0.5) return;
+    lastWidth = width;
+    const gap = parseFloat(getComputedStyle(el).getPropertyValue('--gap')) || 2;
+    const { rects, height } = packLanes(items, width - 2 * gap, gap, probe.offsetWidth);
+    nodes.forEach((n, i) => {
+      const r = rects[i];
+      n.style.cssText = `left:${gap + r.x}px;top:${gap + r.y}px;width:${r.w}px;height:${r.h}px`;
+    });
+    el.style.height = `${height + 2 * gap}px`;
+  };
+  watcher.observe(el);
+  return el;
+}
+
+/** Photo mosaic. Clicking a tile opens the viewer on that list of photos. */
 function grid(list, showAlbum) {
-  const el = h('div', { class: 'grid' });
-  const frag = document.createDocumentFragment();
-  list.forEach((p, i) => frag.append(photoTile(p, i, showAlbum)));
-  el.append(frag);
+  const el = mosaic(list.map((p, i) => photoTile(p, i, showAlbum)), list.map(shape));
   el.addEventListener('click', (e) => {
     const a = e.target.closest('a.tile');
     if (!a || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; // let "open in new tab" work
@@ -93,17 +190,17 @@ function albumsView() {
         ' and each folder shows up here as an album.'))
       : emptyState();
   }
-  const el = h('div', { class: 'grid albums' });
-  for (const a of data.albums) {
+  const covers = data.albums.map((a) => data.photos[a.cover]);
+  const nodes = data.albums.map((a, i) => {
     const date = fmtDate(a.date);
-    el.append(h('a', { class: 'tile', href: `#/albums/${a.slug}` },
-      loadedImg(a.cover),
+    return h('a', { class: 'tile', href: `#/albums/${a.slug}`, 'data-i': i },
+      loadedImg(tileSrc(covers[i])),
       h('div', { class: 'cap' },
         h('b', {}, a.title),
         h('span', {}, plural(a.photos.length)),
-        date && h('span', {}, date))));
-  }
-  return el;
+        date && h('span', {}, date)));
+  });
+  return mosaic(nodes, covers.map(shape), 'albums');
 }
 
 function albumView(slug) {
@@ -122,6 +219,8 @@ function albumView(slug) {
 
 // ---- routing ----------------------------------------------------------------
 function route(scrollToTop) {
+  watcher.disconnect();
+  relayout = null;
   const [tab, arg] = location.hash.replace(/^#\/?/, '').split('/');
   let node;
   let active = 'photos';
@@ -135,12 +234,45 @@ function route(scrollToTop) {
   }
   if (!node) return; // redirecting
   view.replaceChildren(node);
+  if (relayout) relayout();
   document.querySelectorAll('nav a').forEach((a) => {
     if (a.dataset.tab === active) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   });
   if (scrollToTop) window.scrollTo(0, 0);
 }
+
+// ---- view mode toggle ------------------------------------------------------------
+const modeButtons = document.querySelectorAll('.modes button');
+const barBottom = () => $('.bar').getBoundingClientRect().bottom;
+
+function syncModeButtons() {
+  modeButtons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+}
+
+/** The tile sitting nearest the top of the screen, so we can keep it there after the layout changes. */
+function topTile() {
+  const limit = barBottom();
+  let best = null;
+  for (const t of view.querySelectorAll('a.tile[data-i]')) {
+    const r = t.getBoundingClientRect();
+    if (r.bottom > limit && (!best || r.top < best.top - 1)) best = { i: t.dataset.i, top: r.top };
+  }
+  return best && { i: best.i, offset: best.top - barBottom() };
+}
+
+function setMode(next) {
+  if (next === mode) return;
+  const anchor = topTile();
+  mode = next;
+  try { localStorage.setItem('view', mode); } catch { /* storage blocked: fine */ }
+  syncModeButtons();
+  route(false);
+  const t = anchor && view.querySelector(`a.tile[data-i="${anchor.i}"]`);
+  if (t) window.scrollBy(0, t.getBoundingClientRect().top - barBottom() - anchor.offset);
+}
+
+modeButtons.forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
 
 // ---- photo viewer ------------------------------------------------------------
 const viewer = { list: [], i: 0 };
@@ -254,6 +386,8 @@ async function init() {
   }
   albums = new Map(data.albums.map((a) => [a.slug, a]));
   initAbout(data.site);
+  $('.modes').hidden = !data.photos.length; // nothing to lay out yet
+  syncModeButtons();
   if (data.site.author) $('#foot').textContent = `© ${new Date().getFullYear()} ${data.site.author}`;
   addEventListener('hashchange', () => route(true));
   route(false);
