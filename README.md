@@ -62,7 +62,7 @@ Photos in an album are ordered by file name (`01-`, `02-` prefixes work). Albums
 | `title`, `subtitle` | Header text. The title is bold, the subtitle is light. Also used for the browser tab. |
 | `description` | Text search engines show under your site name |
 | `author`, `bio`, `email`, `links` | Shown in the About panel. Leave `bio`, `email` and `links` empty and the About button disappears. Separate bio paragraphs with a blank line (`\n\n`). |
-| `sort` | Order of the Photos tab: `newest` (by EXIF date), `oldest`, `name`, or `random` (reshuffled on every build) |
+| `sort` | Order of the Photos tab: `newest` (by the date stored in each photo), `oldest`, `name`, or `random` (reshuffled on every build). A photo with no date of its own is placed as if taken at the start of its album's date (the date in the folder name, or else the earliest photo in the album). Undated photos in an undated album, or in no album, come last. |
 | `exif_fields` | What the viewer shows and in what order. Choose from `camera`, `lens`, `focal`, `aperture`, `shutter`, `iso`, `date`. Use `[]` to show nothing. |
 | `thumb_size` | Thumbnail width and height in pixels (default 480) |
 | `large_size` | Longest edge of the full-size copy in pixels (default 2200) |

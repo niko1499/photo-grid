@@ -299,6 +299,12 @@ def date_key(d: str) -> str:
     return "-".join(parts + ["00"] * (3 - len(parts)))
 
 
+def period_start(d: str) -> str:
+    """'2026' -> '2026-01-01T00:00:00', '2026-09' -> '2026-09-01T00:00:00', '2026-09-03' -> '2026-09-03T00:00:00'"""
+    y, m, day = (d.split("-") + ["01", "01"])[:3]
+    return f"{y}-{m}-{day}T00:00:00"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Build the photo site into _site/")
     ap.add_argument("--clean", action="store_true", help="wipe _site/ first and rebuild everything")
@@ -362,6 +368,7 @@ def main() -> int:
 
         entry = {
             "date": exif.get("date"),
+            "sort_date": exif.get("date"),  # replaced below for undated photos in a dated album
             "stem": src.stem.lower(),
             "rec": {
                 "src": f"img/large/{rel}",
@@ -379,12 +386,22 @@ def main() -> int:
         if album:
             album["entries"].append(entry)
 
+    # ---- album dates ---------------------------------------------------------
+    # An album's date is the date in its folder name, or failing that the earliest date among its photos.
+    # A photo with no date of its own is sorted as if taken at the start of its album's date, so scans
+    # without EXIF data stay with their album instead of dropping to the bottom of the Photos tab.
+    for a in albums.values():
+        a["date"] = a["date"] or next(iter(sorted(e["date"][:7] for e in a["entries"] if e["date"])), None)
+        for e in a["entries"]:
+            if not e["date"] and a["date"]:
+                e["sort_date"] = period_start(a["date"])
+
     # ---- ordering ------------------------------------------------------------
     order = list(entries)  # already natural-sorted by path
     if cfg["sort"] in ("newest", "oldest"):
-        dated = sorted((e for e in order if e["date"]), key=lambda e: e["date"],
+        dated = sorted((e for e in order if e["sort_date"]), key=lambda e: e["sort_date"],
                        reverse=cfg["sort"] == "newest")
-        order = dated + [e for e in order if not e["date"]]
+        order = dated + [e for e in order if not e["sort_date"]]
     elif cfg["sort"] == "random":
         random.shuffle(order)
     position = {id(e): i for i, e in enumerate(order)}
@@ -394,11 +411,10 @@ def main() -> int:
         if not a["entries"]:
             continue
         cover = next((e for e in a["entries"] if e["stem"].startswith("cover")), a["entries"][0])
-        date = a["date"] or next(iter(sorted(e["date"][:7] for e in a["entries"] if e["date"])), None)
         out_albums.append({
             "slug": a["slug"],
             "title": a["title"],
-            "date": date,
+            "date": a["date"],
             "cover": position[id(cover)],
             "photos": [position[id(e)] for e in a["entries"]],
         })
