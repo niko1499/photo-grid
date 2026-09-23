@@ -151,9 +151,9 @@ function mosaic(nodes, items, extraClass = '') {
   const probe = h('div', { class: 'probe' }); // its width is the CSS minimum column width
   el.append(probe, ...nodes);
   let lastWidth = 0;
-  relayout = () => {
+  relayout = (force) => {
     const width = el.clientWidth;
-    if (!width || Math.abs(width - lastWidth) < 0.5) return;
+    if (!width || (!force && Math.abs(width - lastWidth) < 0.5)) return;
     lastWidth = width;
     const gap = parseFloat(getComputedStyle(el).getPropertyValue('--gap')) || 2;
     const { rects, height } = packLanes(items, width - 2 * gap, gap, probe.offsetWidth);
@@ -274,6 +274,50 @@ function setMode(next) {
 
 modeButtons.forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
 
+// ---- zoom --------------------------------------------------------------------
+// Scales --tile and --album (see style.css), so it works the same way in both view modes.
+const ZOOM_MIN = 50;
+const ZOOM_MAX = 200;
+const ZOOM_DEFAULT = 100;
+const ZOOM_SNAP = 10; // how close to 100% counts as "close enough" to snap to it
+const zoomInput = $('#zoom-range');
+
+/** Move the handle and redraw at the new size. Assumes v is already clamped. */
+function applyZoom(v) {
+  zoomInput.value = v;
+  view.style.setProperty('--zoom', v / 100);
+  if (relayout) relayout(true); // force: the container itself hasn't resized, only --zoom has
+}
+
+const clampZoom = (v) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, v));
+
+// Dragging the slider itself is the one place that snaps near 100%, so it stays a deliberate,
+// occasional "click" into place rather than a magnet that keyboard/wheel steps keep bumping into.
+zoomInput.addEventListener('input', () => {
+  let v = clampZoom(Number(zoomInput.value));
+  if (Math.abs(v - ZOOM_DEFAULT) <= ZOOM_SNAP) v = ZOOM_DEFAULT;
+  applyZoom(v);
+});
+
+/** A single step from the keyboard or the wheel: clamp only, no snapping. */
+function nudgeZoom(delta) {
+  applyZoom(clampZoom(Number(zoomInput.value) + delta));
+}
+
+// Ctrl +/- zoom the photos instead of the whole page. Disabled while a dialog covers them.
+addEventListener('keydown', (e) => {
+  if (!e.ctrlKey || lb.open || about.open) return;
+  if (e.key === '+' || e.key === '=') { e.preventDefault(); nudgeZoom(10); }
+  else if (e.key === '-' || e.key === '_') { e.preventDefault(); nudgeZoom(-10); }
+});
+
+// Ctrl+scroll also zooms, but only over the photos themselves — scrolling the header does nothing.
+view.addEventListener('wheel', (e) => {
+  if (!e.ctrlKey) return;
+  e.preventDefault();
+  nudgeZoom(-Math.sign(e.deltaY) * 5);
+}, { passive: false });
+
 // ---- photo viewer ------------------------------------------------------------
 const viewer = { list: [], i: 0 };
 
@@ -386,7 +430,7 @@ async function init() {
   }
   albums = new Map(data.albums.map((a) => [a.slug, a]));
   initAbout(data.site);
-  $('.modes').hidden = !data.photos.length; // nothing to lay out yet
+  $('.modes').hidden = $('.zoom').hidden = !data.photos.length; // nothing to lay out yet
   syncModeButtons();
   if (data.site.author) $('#foot').textContent = `© ${new Date().getFullYear()} ${data.site.author}`;
   addEventListener('hashchange', () => route(true));

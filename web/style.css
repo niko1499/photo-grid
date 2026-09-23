@@ -12,6 +12,7 @@
   --bar: 3.25rem;
   --tile: clamp(9rem, 16vw, 15rem);    /* minimum photo tile width: 2 columns on phones, ~6 on laptops */
   --album: clamp(11rem, 26vw, 22rem);  /* minimum album tile width */
+  --zoom: 1;                           /* set by the zoom slider in app.js, 0.5 to 2 */
   --font: "Source Sans 3", "Source Sans Pro", system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
 }
@@ -50,10 +51,11 @@ nav > a, nav > button {
 nav > a:hover, nav > button:hover, nav > a[aria-current] { color: var(--text); }
 nav > a[aria-current] { border-bottom-color: currentColor; }
 /* View toggle: square grid  /  original proportions */
-.modes { display: flex; align-items: center; gap: 0.15rem; }
+.modes { position: relative; display: flex; align-items: center; gap: 0.15rem; }
 nav > a, nav > button { position: relative; }
 nav .modes + a::before,
-nav .modes + button::before {
+nav .modes + button::before,
+nav .zoom + .modes::before {
   content: ""; position: absolute; left: -0.8rem; top: 50%; transform: translateY(-50%);
   width: 1px; height: 1.1rem; background: var(--line);
 }
@@ -68,29 +70,65 @@ nav .modes + button::before {
 .modes path { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
 .modes rect { fill: currentColor; }
 
+/* Zoom: 50%-200%, defaults to 100% and snaps back near it. Ctrl +/- and Ctrl+scroll (over the
+   photos, not this bar) also work; see app.js. No numbers are shown, just the tick marks below. */
+.zoom { display: flex; align-items: center; gap: 0.55rem; }
+.zoom-icon { width: 1.05rem; height: 1.05rem; flex: none; color: var(--muted); }
+.zoom-icon circle, .zoom-icon path { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+
+.zoom-track { position: relative; flex: none; display: flex; align-items: center; width: 5.5rem; height: 1.4rem; }
+.zoom-track input[type="range"] {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 100%; margin: 0; background: none; cursor: pointer;
+}
+.zoom-track input[type="range"]::-webkit-slider-runnable-track { height: 2px; background: var(--line); border-radius: 1px; }
+.zoom-track input[type="range"]::-moz-range-track { height: 2px; border: 0; background: var(--line); border-radius: 1px; }
+.zoom-track input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 0.65rem; height: 0.65rem; margin-top: -0.31rem; border-radius: 50%;
+  background: var(--text); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.15); transition: box-shadow 0.15s;
+}
+.zoom-track input[type="range"]::-moz-range-thumb { width: 0.65rem; height: 0.65rem; border: 0; border-radius: 50%; background: var(--text); }
+.zoom-track input[type="range"]:hover::-webkit-slider-thumb,
+.zoom-track input[type="range"]:focus-visible::-webkit-slider-thumb,
+.zoom-track input[type="range"]:hover::-moz-range-thumb,
+.zoom-track input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.15); }
+.zoom-track input[type="range"]:focus-visible { outline: none; } /* the thumb shows its own focus ring above */
+
+.zoom-track .tick {
+  position: absolute; top: 50%; left: 0.325rem; transform: translate(-50%, -50%);
+  width: 1px; height: 0.3rem; background: var(--muted); pointer-events: none;
+}
+.zoom-track .tick.max { left: calc(100% - 0.325rem); }
+.zoom-track .tick.default { left: calc(0.325rem + (100% - 0.65rem) * 0.3333); height: 0.55rem; background: var(--text); }
+
+/* An invisible spacer: forces whatever comes after it onto a new line, but only where set to
+   full width below. On any row that already has room to spare, it stays zero-size and does nothing. */
+.nav-break { flex-basis: 0; width: 0; }
+
 @media (max-width: 34rem) {
-  /* Phones: site name on its own line, tabs and view toggle underneath */
+  /* Phones: site name on its own line, then the view controls, then the tabs -- three rows in all */
   .bar { flex-wrap: wrap; align-content: center; gap: 0; padding-top: 0.55rem; padding-bottom: 0.1rem; }
   .brand { flex: 1 0 100%; font-size: 0.75rem; letter-spacing: 0.12em; }
-  nav { flex: 1 0 100%; gap: 1.1rem; }
+  nav { flex: 1 0 100%; flex-wrap: wrap; gap: 1.1rem; row-gap: 0.5rem; }
   nav > a, nav > button { font-size: 0.7rem; letter-spacing: 0.1em; }
-  .modes { margin-left: auto; }
+  .nav-break { flex-basis: 100%; height: 0; }
   nav .modes + a::before,
-  nav .modes + button::before { display: none; }
+  nav .modes + button::before,
+  nav .zoom + .modes::before { display: none; }
 }
 @media (max-width: 22rem) {
   nav { gap: 0.8rem; }
   .modes button { width: 2rem; }
+  .zoom-track { width: 4rem; }
 }
 
 /* ---- Mosaic ---------------------------------------------------------------- */
 .grid {
   display: grid; gap: var(--gap); padding: var(--gap);
-  --min: var(--tile);
+  --min: calc(var(--tile) * var(--zoom));
   grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--min)), 1fr));
 }
-.grid.albums { --min: var(--album); }
-.grid.albums.packed { --min: var(--tile); } /* Original view: covers use the same column size as photos */
+.grid.albums { --min: calc(var(--album) * var(--zoom)); }
+.grid.albums.packed { --min: calc(var(--tile) * var(--zoom)); } /* Original view: covers use the same column size as photos */
 
 .tile { position: relative; display: block; aspect-ratio: 1; overflow: hidden; background: var(--surface); }
 .tile:focus-visible { outline-offset: -3px; }

@@ -14,6 +14,15 @@
   <header class="bar">
     <a class="brand" href="#/"><strong>{{title}}</strong> <span>{{subtitle}}</span></a>
     <nav aria-label="Main">
+      <div class="zoom" role="group" aria-label="Zoom" hidden>
+        <svg class="zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M15 15l5.5 5.5"/></svg>
+        <span class="zoom-track">
+          <input type="range" id="zoom-range" min="50" max="200" step="1" value="100" aria-label="Zoom level">
+          <span class="tick min" aria-hidden="true"></span>
+          <span class="tick default" aria-hidden="true"></span>
+          <span class="tick max" aria-hidden="true"></span>
+        </span>
+      </div>
       <div class="modes" role="group" aria-label="Layout" hidden>
         <button type="button" data-mode="grid" aria-pressed="true" aria-label="Square grid" title="Square grid">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -28,6 +37,7 @@
           </svg>
         </button>
       </div>
+      <div class="nav-break" aria-hidden="true"></div>
       <a href="#/" data-tab="photos">Photos</a>
       <a href="#/albums" data-tab="albums">Albums</a>
       <button type="button" id="about-open" hidden>About</button>

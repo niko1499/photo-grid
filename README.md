@@ -5,6 +5,7 @@ A photo website for GitHub Pages. Drop photos into folders, push, and the site u
 
 - **Photos** tab: every photo as a square tile. Click one to open it full size.
 - **Albums** tab: one album per folder, with a cover, photo count and date.
+- **View controls** next to the tabs: switch between a square grid and each photo's real proportions, and zoom the grid from 50% to 200%.
 - Lightweight, Dark, edge-to-edge mosaic in the style of the HTML5 UP "Multiverse" theme.
 
 
@@ -14,6 +15,11 @@ https://www.python.org/downloads/
 Pillow>=10.0
 ```pip install pillow```
 https://pypi.org/project/pillow/
+
+## Viewing photos
+
+- The two icons next to the tabs switch between a **square grid** and each photo's **original proportions** (landscape photos are shown twice as wide as a portrait, packed edge to edge with no gaps between pictures).
+- The slider to their left **zooms** the grid, from 50% to 200%, defaulting to 100% and snapping back to it when you're within 10%. You can also zoom with **Ctrl +/-**, or **Ctrl and the scroll wheel** while the cursor is over the photos (not over this bar).
 
 
 ## Publish it
@@ -107,7 +113,7 @@ build.py                 the build script
 requirements.txt         Pillow
 web/index.html           page shell
 web/style.css            theme; colours and sizes are variables at the top
-web/app.js               tabs, mosaic, albums, viewer, About panel
+web/app.js               tabs, view modes, zoom, mosaic, albums, viewer, About panel
 .github/workflows/       automatic deploy
 ```
 
