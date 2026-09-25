@@ -141,6 +141,14 @@ All code here is new and none of it is copied from either project.
 - Source code is under MIT license. Credit links and/or forks of repo are requested and appreciated. (See LICENSE.txt)
 - Images are the creative works of Nikolas Gamarra distribution of the images without credit or for comercial purposes is not permitted (See LICENSE.txt)
 
+## Changelog
+- 1.0.0
+Basic minimalistic photo website
+Grid or origional ratio view modes
+Browse by all photos or by album
+Date sorting only 
+Python build script automatable through GitHub Pages
+
 
 
 
