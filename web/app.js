@@ -343,8 +343,11 @@ function showPhoto() {
   const name = p.title || (album && album.title) || '';
   const sub = p.title && album ? album.title : '';
   $('#lb-where').replaceChildren(...[name && h('b', {}, name), sub && h('span', {}, sub)].filter(Boolean));
-  $('#lb-exif').replaceChildren(...Object.entries(p.exif || {}).map(
-    ([k, v]) => h('span', {}, k === 'date' ? fmtDate(v.slice(0, 10)) : v)));
+  // Author always sits at the far right, whatever order exif_fields is in.
+  const exif = Object.entries(p.exif || {});
+  $('#lb-exif').replaceChildren(
+    ...exif.filter(([k]) => k !== 'author').map(([k, v]) => h('span', {}, k === 'date' ? fmtDate(v.slice(0, 10)) : v)),
+    ...exif.filter(([k]) => k === 'author').map(([, v]) => h('span', {}, v)));
 
   for (const d of [1, -1]) { // warm the cache for the next/previous photo
     const near = list[(i + d + n) % n];
