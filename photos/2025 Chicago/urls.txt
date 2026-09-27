@@ -1,8 +1,3 @@
-# This one is a private photo page, not a public share link, so there's nothing to fetch: the
-# server only serves it to a logged-in session. Share the photo in Immich and put the resulting
-# /share/... link here instead.
-# https://photos.nxg-tv.com/photos/5fbb5cc3-ca66-4768-9589-61c5e4607c2e Lower Wacker
+https://photos.nxg-tv.com/share/d0vnLCrxWLcprN3Nub71SYCSCmSWpbPjwk-ThiKGZLmXcrLwBblV2_1B64v3P6D3D2I Metra Approach
 
-https://photos.nxg-tv.com/share/d0vnLCrxWLcprN3Nub71SYCSCmSWpbPjwk-ThiKGZLmXcrLwBblV2_1B64v3P6D3D2I
-
-https://photos.app.goo.gl/aAwaVfhvcN6hExas8
+https://photos.app.goo.gl/aAwaVfhvcN6hExas8 Cortland Bridge

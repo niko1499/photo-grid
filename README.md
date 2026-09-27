@@ -43,7 +43,7 @@ https://pypi.org/project/pillow/
 
 1. Put this folder in a GitHub repository and push it to the `main` branch. (If your default branch is `master`, change `branches: [main]` in `.github/workflows/pages.yml`.)
 2. In the repository go to **Settings → Pages → Build and deployment → Source** and choose **GitHub Actions**. You only do this once.
-3. Edit `site.json` (title, bio, links), add photos to `photos/`, and push. `site.json` accepts `//` comments, so each setting explains itself in place; `build.py --reset` restores it from `site-template.json`.
+3. Edit `site.json` (title, bio, links), add photos to `photos/`, and push. `site.json`
 
 The workflow in `.github/workflows/pages.yml` builds the site and deploys it. Your address will be `https://<user>.github.io/<repo>/`. Progress shows under the **Actions** tab.
 
@@ -86,7 +86,7 @@ A photo doesn't have to live in this repository. Put a file named `urls.txt` in 
 (or in `photos/` itself, for photos with no album) with one photo per line:
 
 ```
-https://photos.nxg-tv.com/share/VllMG2ik…                              2025-06-14  Old Signal
+https://photos.immich.app/share/VllMG2ik…                              2025-06-14  Old Signal
 https://lh3.googleusercontent.com/pw/AP1Gcz…=w2000                    Golden hour over the lake
 ```
 

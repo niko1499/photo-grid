@@ -14,14 +14,6 @@
   "sort": "newest",
   "exif_fields": ["camera", "focal", "aperture", "shutter", "iso", "author"],
 
-  // How much of each photo's own EXIF goes into the published .webp images:
-  //   "none"    strip all of it
-  //   "credits" keep just Artist and Copyright (the default)
-  //   "all"     keep everything, GPS included -- the build prints a big warning
-  //              naming the files that would publish their location.
-  // Always dropped, even in "all": Orientation (the pixels are already rotated) and the
-  // colour profile (the pixels are converted to sRGB, so it would describe the wrong space).
-  // Set this in site.json; the build reads it from there.
   "metadata": "credits",
 
   "thumb_size": 480,
